@@ -27,12 +27,15 @@ from django.db import transaction
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.exceptions import NotFound
 from django.http import HttpResponse, HttpResponseNotFound, Http404
+from api.user.serializers import *
 
 ############################################# USER ROLE AS MANAGER IN PROJECT VIEWS######################################
 
 class UserRoleViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = UserRole.objects.all()
     serializer_class = UserRoleSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['get'])
     def managers(self, request):
@@ -41,8 +44,56 @@ class UserRoleViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(managers, many=True)
         return Response(serializer.data)
 
+
+################################################## TL Under Manager ############################################################
+
+class TeamLeadsUnderManagerView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    def get(self, request, manager_id, format=None):
+        try:
+            # Fetch the UserRole of the Operations Manager
+            manager_role = UserRole.objects.get(id=manager_id)
+            
+            # Ensure the role of the manager is 'Operations Manager'
+            if manager_role.role.name != 'Manager':
+                return Response(
+                    {'error': 'The specified user is not an Operations Manager'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Get all Team Leads reporting to this Operations Manager
+            team_leads = UserRole.objects.filter(
+                reports_to=manager_role,
+                role__name='Team Lead'
+            )
+
+            # Serialize the manager details
+            manager_serializer = UserRoleSerializers(manager_role.user)
+
+            # Serialize the user information of the Team Leads
+            team_leads_serializer = UserRoleSerializers([lead.user for lead in team_leads], many=True)
+
+            response_data = {
+                'manager': manager_serializer.data,
+                'team_leads': team_leads_serializer.data
+            }
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+        
+        except UserRole.DoesNotExist:
+            return Response(
+                {'error': 'Operations Manager not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+
 ####################################################### Project API View #######################################################
+
 class ProjectListAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             projects = Project.objects.all()
@@ -93,6 +144,8 @@ class ProjectListAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ProjectDetailAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
     def get_object(self, pk):
         try:
             return get_object_or_404(Project, pk=pk)
@@ -134,7 +187,33 @@ class ProjectDetailAPIView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+    def patch(self, request, pk):
+        try:
+            project = self.get_object(pk)
+            data = request.data
+
+            # Only allow updates to man_days or tentative_end_date
+            partial_data = {}
+            if 'man_days' in data:
+                partial_data['man_days'] = data['man_days']
+            if 'tentative_end_date' in data:
+                partial_data['tentative_end_date'] = data['tentative_end_date']
+
+            serializer = ProjectSerializer(project, data=partial_data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Http404 as e:
+            return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
+        
+
 class ProjectCustomActionAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
     def get_object(self, pk):
         try:
             return get_object_or_404(Project, pk=pk)
@@ -167,6 +246,8 @@ class ClientPagination(PageNumberPagination):
 class ClientViewSet(viewsets.ModelViewSet):
     serializer_class = ClientSerializer
     pagination_class = ClientPagination
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = Client.objects.all()
@@ -222,6 +303,8 @@ class ProjectTypeViewSet(viewsets.ModelViewSet):
     queryset = projectType.objects.all()
     serializer_class = ProjectTypeSerializer
     pagination_class = ProjectTypePagination
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = projectType.objects.all()
@@ -254,3 +337,81 @@ class ProjectTypeViewSet(viewsets.ModelViewSet):
         if isinstance(exc, NotFound):
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
         return super().handle_exception(exc)
+
+############################################ PROJECT ASSIGNMENT BY OPERATION MANAGER  TO OPERATION TL ############################################
+
+@swagger_auto_schema(request_body=ProjectAssignmentSerializer(many=True))
+class ProjectAssignmentAPIView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        try:
+            assignments = ProjectAssignment.objects.all()
+            serializer = ProjectAssignmentSerializer(assignments, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+    # POST request to create a new project assignment
+    def post(self, request, *args, **kwargs):
+        data = request.data
+
+        if isinstance(data, list):
+            # Handle bulk creation
+            return self.bulk_create(data)
+        else:
+            # Handle single creation
+            return self.single_create(data)
+        
+        
+    # Helper function to handle bulk creation
+    def single_create(self, data):
+        try:
+            with transaction.atomic():
+                project_id = data.get('project')
+                assigned_by_id = data.get('assigned_by')
+                assigned_to_id = data.get('assigned_to')
+
+                if not project_id or not assigned_by_id or not assigned_to_id:
+                    return Response({"error": "Project ID, Assigned By ID, and Assigned To ID are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+                project = get_object_or_404(Project, id=project_id)
+                assigned_by = get_object_or_404(UserRole, id=assigned_by_id)
+                assigned_to = get_object_or_404(UserRole, id=assigned_to_id)
+
+                assignment = ProjectAssignment(project=project, assigned_by=assigned_by, assigned_to=assigned_to)
+                assignment.save()
+
+                serializer = ProjectAssignmentSerializer(assignment)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    
+    # Helper function to handle bulk creation
+    def bulk_create(self, data):
+        try:
+            assignments = []
+            with transaction.atomic():
+                for item in data:
+                    project_id = item.get('project')
+                    assigned_by_id = item.get('assigned_by')
+                    assigned_to_id = item.get('assigned_to')
+
+                    if not project_id or not assigned_by_id or not assigned_to_id:
+                        return Response({"error": "Project ID, Assigned By ID, and Assigned To ID are required for all items."}, status=status.HTTP_400_BAD_REQUEST)
+
+                    project = get_object_or_404(Project, id=project_id)
+                    assigned_by = get_object_or_404(UserRole, id=assigned_by_id)
+                    assigned_to = get_object_or_404(UserRole, id=assigned_to_id)
+
+                    assignment = ProjectAssignment(project=project, assigned_by=assigned_by, assigned_to=assigned_to)
+                    assignments.append(assignment)
+
+                ProjectAssignment.objects.bulk_create(assignments)
+
+                serializer = ProjectAssignmentSerializer(assignments, many=True)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

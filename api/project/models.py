@@ -85,14 +85,15 @@ class Project(models.Model):
     total_achievement = models.CharField(max_length=255, null=True, blank=True, default=None)
     remaining_time = models.DurationField(default=timedelta(), null=True, blank=True)
     remaining_interview = models.CharField(max_length=255, null=True, blank=True, default=None)
-    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='created_projects')
+    created_by = models.ForeignKey(UserRole, on_delete=models.CASCADE, related_name='created_projects')
     assigned_to = models.ForeignKey(UserRole, null=True, blank=True, on_delete=models.SET_NULL, related_name='assigned_projects')
     status = models.CharField(max_length=20, choices=[
-        ('To be started', 'To be started'),
+        ('Project Initiated', 'Project Initiated'),
+        ('To Be Started', 'To Be Started'),
         ('In Progress', 'In Progress'),
         ('Completed', 'Completed'),
-        ('Hold', 'Hold'),
-    ], default='To be started')
+        ('On Hold', 'On Hold'),
+    ], default='To Be Started')
     is_active = models.BooleanField(default=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -104,15 +105,15 @@ class Project(models.Model):
         if self.tentative_start_date and self.tentative_end_date:
             self.estimated_time = self.tentative_end_date - self.tentative_start_date
         super().save(*args, **kwargs)
-        if self.status == 'Completed':
-            self.raise_cbr_to_finance()
+        # if self.status == 'Completed':
+        #     self.raise_cbr_to_finance()
 
-    def raise_cbr_to_finance(self):
-        # Logic to raise CBR to finance team
-        FinanceRequest.objects.create(
-            project=self,
-            requested_by=self.assigned_to
-        )
+    # def raise_cbr_to_finance(self):
+    #     # Logic to raise CBR to finance team
+    #     FinanceRequest.objects.create(
+    #         project=self,
+    #         requested_by=self.assigned_to
+    #     )
 
 
 class ProjectAssignment(models.Model):
@@ -124,32 +125,6 @@ class ProjectAssignment(models.Model):
     def __str__(self):
         return f"{self.project.name} assigned to {self.assigned_to.user.username} by {self.assigned_by.user.username}"
 
-class ProjectUpdate(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='updates')
-    updated_by = models.ForeignKey(UserRole, on_delete=models.CASCADE)
-    update_date = models.DateTimeField(auto_now_add=True)
-    man_days_filled = models.FloatField()
-    total_man_days = models.FloatField()
-    remaining_time = models.DurationField(default=timedelta())
-    remaining_interview = models.CharField(max_length=255, null=True, blank=True)
-    total_achievement = models.CharField(max_length=255, null=True, blank=True, default='INPROGRESS')
-    is_active = models.BooleanField(default=True)
-
-    def __str__(self):
-        return f"{self.project.project_code} - {self.updated_by.role} - {self.updated_by.user.username} - {self.update_date} - {self.man_days_filled} - {self.total_man_days} - {self.remaining_time} - {self.total_achievement}"
-
-    
-    def remaining_time_in_hours(self):
-        return self.remaining_time.total_seconds()/3600
-    
-    
-    def calculate_remaining_interview(self):
-        if self.total_man_days and self.man_days_filled:
-            remaining_interview = self.total_man_days - self.man_days_filled
-            return remaining_interview
-        else:
-            return None
-    
 
 class ProjectUpdatedData(models.Model):
     project_code = models.CharField(max_length=255, null=True, blank=True, unique=True)

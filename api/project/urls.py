@@ -13,5 +13,7 @@ urlpatterns = [
     path('projects/', ProjectListAPIView.as_view(), name='project-list'),
     path('projects/<int:pk>/', ProjectDetailAPIView.as_view(), name='project-detail'),
     path('projects/<int:pk>/custom_action/', ProjectCustomActionAPIView.as_view(), name='project-custom-action'),
+    path('manager/<int:manager_id>/teamleads/', TeamLeadsUnderManagerView.as_view(), name='teamleads-under-manager'),
+    path('project-assignments/', ProjectAssignmentAPIView.as_view(), name='project-assignment'),
 
 ]

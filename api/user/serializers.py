@@ -89,7 +89,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['username', 'email', 'password', 'confirm_password', 'phone', 'gender', 'user_department']
+        fields = ['username', 'email', 'password', 'confirm_password', 'phone', 'gender']
         extra_kwargs = {'password': {'write_only': True}}
 
     def validate_email(self, value):
@@ -167,6 +167,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         try:
             token['role'] = user.userrole.role.name
             token['department'] = user.userrole.department.name
+            token['userrole'] = user.userrole.id
         except AttributeError as e:
             token['role'] = "role not found"
         # Add any other custom claims you need
@@ -290,3 +291,4 @@ class CityMasterSerializer(serializers.ModelSerializer):
         
         
         
+

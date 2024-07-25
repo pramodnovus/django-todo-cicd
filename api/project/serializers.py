@@ -18,8 +18,21 @@ class ProjectSerializer(serializers.ModelSerializer):
                   'clients','cpi','set_up_fee','transaction_fee', 'status', 
                   'other_cost','operation_select','finance_select','upload_document',
                   'tentative_start_date','tentative_end_date','estimated_time','status',
-                  'remark','assigned_to','created_by','created_at', 'updated_at')
+                  'remark','assigned_to','created_by','created_at', 'updated_at'
+                  )
         
+        
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['clients'] = {
+            'id': instance.clients.id,
+            'username': instance.clients.name,
+        }if instance.department else None
+        data['project_type'] = {
+            'id': instance.project_type.id,
+            'name': instance.project_type.name
+        }if instance.department else None
+
     
     def create(self, validated_data):
         request = self.context.get('request')
@@ -71,8 +84,7 @@ class ProjectTypeSerializer(serializers.ModelSerializer):
 
 
 ############################################### USER ROLE SERILIZER AS MANAGER SHOW INTO DROPDOWN #######################################
-from rest_framework import serializers
-from api.user.models import UserRole
+
 
 class UserRoleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -100,3 +112,19 @@ class UserRoleSerializer(serializers.ModelSerializer):
         } if instance.reports_to else None
         return data
         
+
+############################################## USER SERIALIZERS MODIFICATION ###############################################################
+
+class UserRoleSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'email','username']        
+        
+        
+############################################ PROJECT ASSIGNMENT BY OPERATION MANAGER  TO OPERATION TL ############################################
+
+
+class ProjectAssignmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectAssignment
+        fields = '__all__'       

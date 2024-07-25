@@ -13,7 +13,7 @@ class ProjectTypeAdmin(ImportExportModelAdmin):
 
 @admin.register(Project)
 class ProjectAdmin(ImportExportModelAdmin):
-    list_display = ['id','project_code','name','project_type','sample','clients','cpi','other_cost','operation_select','finance_select','upload_document','tentative_start_date','tentative_end_date','estimated_time','status','remark','created_by','assigned_to'] 
+    list_display = ['id','project_code','name','project_type','sample','clients','cpi','other_cost','operation_select','finance_select','upload_document','tentative_start_date','tentative_end_date','estimated_time','status','remark','assigned_to'] 
 
 # @admin.register(ProjectCode)
 # class ProjectCodeAdmin(ImportExportModelAdmin):
@@ -26,4 +26,3 @@ class ClientAdmin(ImportExportModelAdmin):
     
 
 
-admin.site.register(ProjectUpdate)
