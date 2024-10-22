@@ -264,6 +264,7 @@ class UserPasswordResetView(APIView):
     return Response({'msg':'Password Reset Successfully'}, status=status.HTTP_200_OK)
 
 
+
 class ZoneViewSet(viewsets.ModelViewSet):
     queryset = ZoneMaster.objects.all()
     serializer_class = ZoneMasterSerializer

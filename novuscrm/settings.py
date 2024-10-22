@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-6c!mbmafp5w3&(cykg*#z)67&a*a**@d4b@y!eyuub4oqq5cti
 DEBUG = True
 
 # ALLOWED_HOSTS = ['13.200.128.137', '127.0.0.1', 'localhost']
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*','65.0.180.82']
 
 
 AUTH_USER_MODEL = 'user.CustomUser'
@@ -137,6 +137,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+import os
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR,'media')
 
@@ -226,8 +230,22 @@ SIMPLE_JWT = {
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.office365.com'  # 'smtp-mail.outlook.com'
+EMAIL_HOST = 'smtp.office365.com'
 EMAIL_USE_TLS = True
-EMAIL_PORT = 25       # 587
+EMAIL_PORT = 587
 EMAIL_HOST_USER = 'noreply.erp@unimrkt.com'
 EMAIL_HOST_PASSWORD = 'Q&005753819961ad'
+
+
+import sentry_sdk
+
+sentry_sdk.init(
+    dsn="https://8c3954d42c7a0d94fdcfe99a9ec1f540@o4507542641704960.ingest.us.sentry.io/4507707560361984",
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    traces_sample_rate=1.0,
+    # Set profiles_sample_rate to 1.0 to profile 100%
+    # of sampled transactions.
+    # We recommend adjusting this value in production.
+    profiles_sample_rate=1.0,
+)

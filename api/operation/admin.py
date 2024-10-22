@@ -4,19 +4,19 @@ from import_export.admin import ImportExportModelAdmin
 
 class ProjectUpdateAdmin(admin.ModelAdmin):
     list_display = (
-        'project',
+        'project_id',
         'updated_by',
-        'update_date',
-        'man_days_filled',
+        'update_date', 
         'total_man_days',
         'remaining_time',
         'remaining_interview',
         'total_achievement',
+        'status',
         'is_active',
     )
     list_filter = (
         'update_date',
-        'project',
+        'project_id',
         'updated_by',
         'is_active',
     )
@@ -34,4 +34,4 @@ admin.site.register(ProjectUpdate, ProjectUpdateAdmin)
 
 @admin.register(ProjectAssignment)
 class ProjectAssignment(admin.ModelAdmin):
-    list_display = ('project','assigned_by','assigned_to','assigned_at')
+    list_display = ('project_id','assigned_by','assigned_to','assigned_at')

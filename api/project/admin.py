@@ -25,4 +25,4 @@ class ClientAdmin(ImportExportModelAdmin):
     list_display = ('name','project_code','client_purchase_order_no','email_id_for_cc','additional_survey','total_survey_to_be_billed_to_client','other_specific_billing_instruction')
     
 
-
+admin.site.register(ProjectUpdatedData)

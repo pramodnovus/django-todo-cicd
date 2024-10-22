@@ -60,7 +60,7 @@ class projectType(models.Model):
     
 # Project/Sales model
 class Project(models.Model):
-    project_id = models.CharField(max_length=100, null=True, blank=True)
+    #project_id = models.CharField(max_length=100, null=True, blank=True)
     project_code = models.CharField(max_length=255, null=True, blank=True, unique=True)
     name = models.CharField(max_length=250)
     project_type = models.ForeignKey(projectType, on_delete=models.CASCADE, null=True, blank=True)
@@ -93,7 +93,7 @@ class Project(models.Model):
         ('In Progress', 'In Progress'),
         ('Completed', 'Completed'),
         ('On Hold', 'On Hold'),
-    ], default='To Be Started')
+    ], default='Project Initiated')
     is_active = models.BooleanField(default=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -117,20 +117,19 @@ class Project(models.Model):
 
 
 class ProjectAssignment(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    project_id = models.ForeignKey(Project, on_delete=models.CASCADE)
     assigned_by = models.ForeignKey(UserRole, on_delete=models.CASCADE, related_name='assigned_projects_by')
     assigned_to = models.ForeignKey(UserRole, on_delete=models.CASCADE, related_name='assigned_projects_to')
     assigned_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.project.name} assigned to {self.assigned_to.user.username} by {self.assigned_by.user.username}"
+        return f"{self.project_id.name} assigned to {self.assigned_to.user.username} by {self.assigned_by.user.username}"
 
 
 class ProjectUpdatedData(models.Model):
-    project_code = models.CharField(max_length=255, null=True, blank=True, unique=True)
-    sample = models.CharField(max_length=50,null=True, blank=True)
-    tentative_end_date = models.DateTimeField(null=True,blank=True)   
-    reason_for_adjustment = models.TextField(null=True, blank=True,default=None)
-    
-
-    
+    project_id = models.IntegerField(unique=True)
+    sample = models.CharField(max_length=50, null=True, blank=True)
+    tentative_end_date = models.DateTimeField(null=True, blank=True)
+    reason_for_adjustment = models.TextField(null=True, blank=True, default=None)
+    updated_by = models.ForeignKey(UserRole, on_delete=models.CASCADE, related_name='updated_projects_by')
+    updated_at = models.DateTimeField(auto_now_add=True)

@@ -31,8 +31,12 @@ from drf_yasg import openapi
 # import yaml
 # credentials = yaml.load(open('./testproject/credentials.yml','r'),Loader=yaml.FullLoader)
 
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
 swaggerurl = [
     path('api/', include('api.urls')),
+    path('sentry-debug/', trigger_error),
 ]
 
 schema_view = get_schema_view(
@@ -46,7 +50,7 @@ schema_view = get_schema_view(
    ),
    
 #    url= credentials['HOST_URL']+'api/v1/',
-   url = "http://127.0.0.1:8000/",
+   url = "http://65.0.180.82",
    public=True,
    permission_classes=[permissions.AllowAny],
    patterns=swaggerurl
